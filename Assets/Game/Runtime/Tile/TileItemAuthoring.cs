@@ -14,7 +14,6 @@ namespace gs.chef.game.tile
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 
-                AddComponent<AddressComponent>(entity);
                 AddComponent<ClickableComponent>(entity);
                 SetComponentEnabled<ClickableComponent>(entity, false);
                 AddComponent<TileItemComponent>(entity);
@@ -22,11 +21,6 @@ namespace gs.chef.game.tile
                 SetComponentEnabled<TileMovingComponent>(entity, false);
             }
         }
-    }
-    
-    public struct AddressComponent : IComponentData
-    {
-        public int2 Address;
     }
     
     public struct ClickableComponent : IComponentData, IEnableableComponent
@@ -39,6 +33,7 @@ namespace gs.chef.game.tile
         public float3 Position;
         public quaternion Rotation;
         public float Scale;
+        public int2 Address;
     }
     
     public struct TileMovingComponent : IComponentData, IEnableableComponent

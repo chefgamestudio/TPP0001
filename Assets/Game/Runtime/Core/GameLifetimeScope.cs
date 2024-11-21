@@ -46,19 +46,15 @@ namespace gs.chef.game.core
             builder.Register<LevelManager>(Lifetime.Singleton).AsImplementedInterfaces().AsSelf();
 
             #endregion
+            
 
-            #region Input
-
-            builder.Register<GameInputManager>(Lifetime.Singleton);
-
-            #endregion
-
-            #region ECS Systems
+            #region Register ECS Systems
 
             builder.UseDefaultWorld(system =>
             {
                 system.Add<AppStateSystem>();
                 system.Add<LevelManageSystem>();
+                system.Add<GameInputSystem>();
             });
 
             #endregion

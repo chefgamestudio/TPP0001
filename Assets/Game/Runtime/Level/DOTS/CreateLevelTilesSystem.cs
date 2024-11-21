@@ -1,4 +1,5 @@
 using EntitiesEvents;
+using gs.chef.game.input;
 using gs.chef.game.tile;
 using Synthesis.App;
 using Synthesis.SystemGroups;
@@ -18,6 +19,7 @@ namespace gs.chef.game.level
     public partial struct CreateLevelTilesSystem : ISystem
     {
         private EventReader<OnChangeAppStateEvent> _onChangeAppStateEventReader;
+        private EventWriter<InputActiveEvent> _inputActiveEventWriter;
 
         private NativeArray<float3> positions;
         private NativeArray<int2> addresses;
@@ -27,6 +29,7 @@ namespace gs.chef.game.level
         {
             state.RequireForUpdate<LevelConfigSystemAuthoring.SystemIsEnabledTag>();
             _onChangeAppStateEventReader = state.GetEventReader<OnChangeAppStateEvent>();
+            _inputActiveEventWriter = state.GetEventWriter<InputActiveEvent>();
         }
 
         [BurstCompile]
@@ -87,15 +90,11 @@ namespace gs.chef.game.level
                         Rotation = quaternion.identity,
                         Scale = 1f
                     });
-
-                    state.EntityManager.SetComponentData(tileEntity, new AddressComponent
-                    {
-                        Address = addresses[i]
-                    });
-
+                    
                     state.EntityManager.SetComponentData(tileEntity, new TileItemComponent
                     {
                         TileType = tileType,
+                        Address = addresses[i],
                         Position = positions[i] + new float3(0, 14f, 0),
                         Rotation = Quaternion.identity,
                         Scale = 1f
@@ -116,7 +115,10 @@ namespace gs.chef.game.level
                 positions.Dispose();
                 addresses.Dispose();
 
-                
+                _inputActiveEventWriter.Write(new InputActiveEvent
+                {
+                    IsActive = true
+                });
             }
         }
 

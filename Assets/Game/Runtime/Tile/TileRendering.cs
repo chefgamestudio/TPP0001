@@ -36,7 +36,7 @@ namespace gs.chef.game.tile
 
 
         [BurstCompile]
-        private void Execute(Entity entity, in AddressComponent addressComponent, [ChunkIndexInQuery] int sortKey)
+        private void Execute(Entity entity, in TileItemComponent addressComponent, [ChunkIndexInQuery] int sortKey)
         {
         }
 

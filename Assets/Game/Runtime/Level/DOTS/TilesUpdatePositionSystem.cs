@@ -89,7 +89,7 @@ namespace gs.chef.game.level
         public float DeltaTime;
 
         private void Execute(Entity entity, ref TileItemComponent itemComponent, ref LocalTransform localTransform,
-            ref TileMovingComponent movingComponent, in AddressComponent addressComponent,
+            ref TileMovingComponent movingComponent,
             [ChunkIndexInQuery] int sortKey)
         {
             var position = itemComponent.Position;
@@ -109,7 +109,7 @@ namespace gs.chef.game.level
                 localTransform.Position = targetPosition;
                 itemComponent.Position = targetPosition;
                 CommandBuffer.SetComponentEnabled<TileMovingComponent>(sortKey, entity, false);
-                if (addressComponent.Address.y <= 10)
+                if (itemComponent.Address.y <= 10)
                     CommandBuffer.SetComponentEnabled<ClickableComponent>(sortKey, entity, true);
                 else
                 {
