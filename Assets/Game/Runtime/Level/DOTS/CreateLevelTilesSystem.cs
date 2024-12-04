@@ -1,4 +1,5 @@
 using EntitiesEvents;
+using gs.chef.game.Grid;
 using gs.chef.game.input;
 using gs.chef.game.tile;
 using Synthesis.App;
@@ -46,6 +47,7 @@ namespace gs.chef.game.level
                 var startTransform = SystemAPI.GetComponent<LocalTransform>(levelConfigEntity);
                 var initialPosition = startTransform.Position;
                 var createTilesConfigData = SystemAPI.GetComponent<LevelTilesConfigComponent>(levelConfigEntity);
+                var createGridsConfigData = SystemAPI.GetComponent<LevelGridsConfigComponent>(levelConfigEntity);
 
                 var rows = levelConfigData.TotalRows;
                 var columns = levelConfigData.Columns;
@@ -76,12 +78,26 @@ namespace gs.chef.game.level
 
                 for (int i = 0; i < positions.Length; i++)
                 {
+                    var gridEntity = state.EntityManager.Instantiate(createGridsConfigData.GridCellPrefab);
+                    
+                    state.EntityManager.SetComponentData(gridEntity, new GridCellComponent
+                    {
+                        Position = positions[i],
+                        Address = addresses[i],
+                        IsEmpty = false
+                    });
+                }
+
+                for (int i = 0; i < positions.Length; i++)
+                {
                     var tileTypeInt = random.NextInt(1, 5);
                     var tileType = (TileType)tileTypeInt;
+
+                    
                     
                     
                     var tileEntity = state.EntityManager.Instantiate(createTilesConfigData.GetTilePrefab(tileType));
-                    
+
                     
                     
                     state.EntityManager.SetComponentData(tileEntity, new LocalTransform
@@ -96,20 +112,23 @@ namespace gs.chef.game.level
                         TileType = tileType,
                         Address = addresses[i],
                         Position = positions[i] + new float3(0, 14f, 0),
-                        Rotation = Quaternion.identity,
-                        Scale = 1f
+                        Rotation = quaternion.identity,
+                        Scale = 1f,
+                        IsMatched = false,
+                        TileEntity = tileEntity
                     });
 
                     state.EntityManager.SetComponentData(tileEntity, new TileMovingComponent
                     {
                         TargetPosition = positions[i],
-                        Speed = createTilesConfigData.MovingSpeed
+                        Speed = createTilesConfigData.MovingSpeed,
+                        IsMoving = true
                     });
 
                     //state.EntityManager.SetComponentEnabled<MaterialMeshInfo>(tileEntity, addresses[i].y < vistaRows);
 
                     state.EntityManager.SetComponentEnabled<ClickableComponent>(tileEntity, false);
-                    state.EntityManager.SetComponentEnabled<TileMovingComponent>(tileEntity, true);
+                    //state.EntityManager.SetComponentEnabled<TileMovingComponent>(tileEntity, true);
                 }
 
                 positions.Dispose();

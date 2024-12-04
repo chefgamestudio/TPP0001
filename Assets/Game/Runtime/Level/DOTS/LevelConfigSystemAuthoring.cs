@@ -21,6 +21,10 @@ namespace gs.chef.game.level
         [SerializeField] private float _scale;
         [SerializeField] private float _movingSpeed;
         
+        [Space(height:5f)]
+        [Header("Level Grids Config")]
+        [SerializeField] private GameObject _gridCellPrefab;
+        
         public struct SystemIsEnabledTag : IComponentData {}
         private class LevelConfigSystemAuthoringBaker : Baker<LevelConfigSystemAuthoring>
         {
@@ -53,11 +57,24 @@ namespace gs.chef.game.level
                     AddComponent<CreateLevelTilesTag>(entity);
                     SetComponentEnabled<CreateLevelTilesTag>(entity, false);
                     
+                    AddComponent<LevelGridsConfigComponent>(entity, new LevelGridsConfigComponent
+                    {
+                        GridCellPrefab = GetEntity(authoring._gridCellPrefab, TransformUsageFlags.None)
+                    });
+                    //SetComponentEnabled<LevelGridsConfigComponent>(entity, false);
+                    
+                    
                     //SetComponentEnabled<LevelTilesConfigComponent>(entity, false);
                 }
             }
         }
     }
+
+    public struct LevelGridsConfigComponent : IComponentData
+    {
+        public Entity GridCellPrefab;
+    }
+        
     
     public struct LevelConfigComponent : IComponentData
     {

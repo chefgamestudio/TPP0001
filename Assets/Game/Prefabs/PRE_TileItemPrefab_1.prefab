@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PRE_TileItemPrefab_1
       objectReference: {fileID: 0}
+    - target: {fileID: 2358792054350790848, guid: 4c6188f697bbe4d2bbfcf98fa8034ba9, type: 3}
+      propertyPath: _matchingDuration
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 3977523224975793046, guid: 4c6188f697bbe4d2bbfcf98fa8034ba9, type: 3}
       propertyPath: m_Enabled
       value: 1

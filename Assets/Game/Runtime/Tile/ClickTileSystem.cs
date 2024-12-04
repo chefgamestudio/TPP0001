@@ -1,4 +1,6 @@
 using EntitiesEvents;
+using gs.chef.game.input;
+using gs.chef.game.level;
 using gs.chef.game.tile.events;
 using Unity.Burst;
 using Unity.Collections;
@@ -6,35 +8,26 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Logging;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 namespace gs.chef.game.tile
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(GameInputSystem))]
     public partial struct ClickTileSystem : ISystem
     {
         private EventReader<ClickedTileEvent> _clickedTileEventReader;
-        
+
         private EntityQuery _tileQuery;
 
         //[BurstCompile]
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<LevelConfigSystemAuthoring.SystemIsEnabledTag>();
             _tileQuery = state.EntityManager.CreateEntityQuery(typeof(TileItemComponent));
             _clickedTileEventReader = state.GetEventReader<ClickedTileEvent>();
         }
         
-        
-        /*public partial struct FindNeighborsJob : IJobEntity
-        {
-            
-            
-            private void Execute()
-            {
-                
-            }
-        }*/
-
-        //[BurstCompile]
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             Entity clickedTileEntity = Entity.Null;
@@ -50,93 +43,110 @@ namespace gs.chef.game.tile
                 return;
             }
 
+            var levelConfigEntity = SystemAPI.GetSingletonEntity<LevelConfigSystemAuthoring.SystemIsEnabledTag>();
+            var levelConfigData = SystemAPI.GetComponent<LevelConfigComponent>(levelConfigEntity);
+
             var tileItemComponent = SystemAPI.GetComponent<TileItemComponent>(clickedTileEntity);
             Log.Warning($"Clicked tile: {(int)tileItemComponent.TileType}, {tileItemComponent.Address}");
-            
-            
-            var tileEntities = _tileQuery.ToEntityArray(state.WorldUpdateAllocator);
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
 
-            int2 startingAddress = tileItemComponent.Address;
-            NativeList<Entity> sameColorTiles = FindSameColorTiles(state.EntityManager, startingAddress,
-                clickedTileEntity, tileItemComponent.TileType, 10, 8);
+            NativeArray<Entity> tileEntities = _tileQuery.ToEntityArray(state.WorldUpdateAllocator);
+            NativeList<Entity> foundTiles = new NativeList<Entity>(state.WorldUpdateAllocator);
+            NativeArray<TileItemComponent> tileItemComponents =
+                _tileQuery.ToComponentDataArray<TileItemComponent>(state.WorldUpdateAllocator);
+            NativeQueue<int2> addressQueue = new NativeQueue<int2>(state.WorldUpdateAllocator);
+            NativeHashSet<int2> visitedAddresses = new NativeHashSet<int2>(4, state.WorldUpdateAllocator);
 
-// Process the found tiles
-            foreach (Entity tileEntity in sameColorTiles)
+
+            var job = new FindNeighborTilesJob
             {
-                // Do something with the tile entity, e.g., change its color
-                var localTransform = SystemAPI.GetComponent<LocalTransform>(tileEntity);
-                localTransform.Scale = 0.3f;
-                SystemAPI.SetComponent<LocalTransform>(tileEntity, localTransform);
-                // ...
+                TileEntities = tileEntities,
+                FoundTiles = foundTiles,
+                StartAddress = tileItemComponent.Address,
+                TargetTileType = tileItemComponent.TileType,
+                StartingTileEntity = clickedTileEntity,
+                TileItemComponents = tileItemComponents,
+                AddressQueue = addressQueue,
+                VisitedAddresses = visitedAddresses,
+                Rows = levelConfigData.VistaRows,
+                Columns = levelConfigData.Columns,
+            };
+
+            state.Dependency = job.Schedule(state.Dependency);
+
+            state.Dependency.Complete();
+
+            if (foundTiles.Length > 2)
+            {
+                foreach (Entity tileEntity in foundTiles)
+                {
+                    // Do something with the tile entity, e.g., change its color
+                    /*var localTransform = SystemAPI.GetComponent<TileMatchAnimationTag>(tileEntity);
+                    localTransform.Scale = 0.3f;
+                    SystemAPI.SetComponent<LocalTransform>(tileEntity, localTransform);*/
+                    SystemAPI.SetComponentEnabled<ClickableComponent>(tileEntity, false);
+                    SystemAPI.SetComponentEnabled<TileMatchAnimationTag>(tileEntity, true);
+                }
             }
 
-            sameColorTiles.Dispose(); // VERY IMPORTANT: Dispose the NativeList when you're done with it.
+
+            foundTiles.Dispose();
+            tileEntities.Dispose();
+            tileItemComponents.Dispose();
+            addressQueue.Dispose();
+            visitedAddresses.Dispose();
         }
-        
-         
+    }
 
+    [BurstCompile]
+    public struct FindNeighborTilesJob : IJob
+    {
+        [ReadOnly] public NativeArray<TileItemComponent> TileItemComponents;
+        [ReadOnly] public NativeArray<Entity> TileEntities;
+        [ReadOnly] public int2 StartAddress;
+        [ReadOnly] public TileType TargetTileType;
+        [ReadOnly] public Entity StartingTileEntity;
+        [ReadOnly] public int Rows;
+        [ReadOnly] public int Columns;
 
-        private NativeList<Entity> FindSameColorTiles(EntityManager entityManager, int2 startAddress,
-            Entity startingTileEntity, TileType tileType, int rows, int columns)
+        public NativeList<Entity> FoundTiles;
+        public NativeQueue<int2> AddressQueue;
+        public NativeHashSet<int2> VisitedAddresses;
+
+        [BurstCompile]
+        public void Execute()
         {
-            // Find the starting tile entity.
-            //var tileQuery = entityManager.CreateEntityQuery(typeof(TileItemComponent));
+            AddressQueue.Enqueue(StartAddress);
+            VisitedAddresses.Add(StartAddress);
+            FoundTiles.Add(StartingTileEntity);
 
+            NativeList<int2> neighborOffsets = new NativeList<int2>(4, Allocator.Temp);
+            neighborOffsets.Add(new int2(1, 0));
+            neighborOffsets.Add(new int2(-1, 0));
+            neighborOffsets.Add(new int2(0, 1));
+            neighborOffsets.Add(new int2(0, -1));
 
-            TileType targetTileType = tileType;
-            NativeList<Entity> foundTiles = new NativeList<Entity>(Allocator.Temp);
-            NativeQueue<int2> addressQueue = new NativeQueue<int2>(Allocator.Temp);
-            NativeHashSet<int2> visitedAddresses = new NativeHashSet<int2>(4, Allocator.Temp);
-
-            NativeArray<TileItemComponent> tileItemComponents =
-                _tileQuery.ToComponentDataArray<TileItemComponent>(Allocator.Temp);
-
-            addressQueue.Enqueue(startAddress);
-            visitedAddresses.Add(startAddress);
-            foundTiles.Add(startingTileEntity);
-
-            int2[] neighborOffsets = { new int2(1, 0), new int2(-1, 0), new int2(0, 1), new int2(0, -1) };
-
-            while (addressQueue.Count > 0)
+            while (AddressQueue.Count > 0)
             {
-                int2 currentAddress = addressQueue.Dequeue();
-                
-                Log.Warning($"Current address: {currentAddress}");
+                int2 currentAddress = AddressQueue.Dequeue();
 
                 foreach (var offset in neighborOffsets)
                 {
                     int2 neighbor = currentAddress + offset;
-                    Log.Warning($"Neighbor found: {currentAddress} + {offset} -> {neighbor}");
 
-                    if (neighbor.x < 0 || neighbor.x >= columns || neighbor.y < 0 || neighbor.y >= rows)
+                    if (neighbor.x < 0 || neighbor.x >= Columns || neighbor.y < 0 || neighbor.y >= Rows)
                         continue;
 
-                    if (!visitedAddresses.Contains(neighbor))
+                    if (!VisitedAddresses.Contains(neighbor))
                     {
-                        //Entity neighborEntity = Entity.Null;
-
-                        for (int i = 0; i < tileItemComponents.Length; i++)
+                        for (int i = 0; i < TileItemComponents.Length; i++)
                         {
-                            if (tileItemComponents[i].Address.Equals(neighbor) && tileItemComponents[i].TileType == targetTileType)
+                            if (TileItemComponents[i].Address.Equals(neighbor) &&
+                                TileItemComponents[i].TileType == TargetTileType)
                             {
-                                
-                                var neighborEntity = _tileQuery.ToEntityArray(Allocator.Temp)[i];
-                                foundTiles.Add(neighborEntity);
-                                addressQueue.Enqueue(neighbor);
-                                visitedAddresses.Add(neighbor);
+                                var neighborEntity = TileEntities[i];
+                                FoundTiles.Add(neighborEntity);
+                                AddressQueue.Enqueue(neighbor);
+                                VisitedAddresses.Add(neighbor);
                                 break;
                             }
                         }
@@ -144,101 +154,7 @@ namespace gs.chef.game.tile
                 }
             }
 
-            addressQueue.Dispose();
-            visitedAddresses.Dispose();
-            tileItemComponents.Dispose();
-            return foundTiles;
-        }
-
-
-        [BurstCompile]
-        public void OnDestroy(ref SystemState state)
-        {
+            neighborOffsets.Dispose();
         }
     }
 }
-
-/*
-using Unity.Entities;
-   using Unity.Mathematics;
-   using Unity.Collections;
-
-   public static class TileFinder
-   {
-       public static NativeList<Entity> FindSameColorTiles(EntityManager entityManager, int2 startAddress)
-       {
-           // Find the starting tile entity.
-           Entity startingTileEntity = -1; // Invalid entity handle initially.
-           var tileQuery = entityManager.CreateEntityQuery(typeof(TileItemComponent));
-           var tiles = tileQuery.ToComponentDataArray<TileItemComponent>(Allocator.Temp);
-
-           for (int i = 0; i < tiles.Length; i++)
-           {
-               if (tiles[i].Address.Equals(startAddress))
-               {
-                   startingTileEntity = tileQuery.ToEntityArray(Allocator.Temp)[i];
-                   break; // Found the starting tile
-               }
-           }
-
-           tiles.Dispose();
-
-           if (startingTileEntity == -1)
-           {
-               return new NativeList<Entity>(Allocator.Temp); // Return empty list if start address not found.
-           }
-
-
-           TileType targetTileType = entityManager.GetComponentData<TileItemComponent>(startingTileEntity).TileType;
-           NativeList<Entity> foundTiles = new NativeList<Entity>(Allocator.Temp);
-           NativeQueue<int2> addressQueue = new NativeQueue<int2>(Allocator.Temp);
-           NativeHashSet<int2> visitedAddresses = new NativeHashSet<int2>(Allocator.Temp);
-
-           addressQueue.Enqueue(startAddress);
-           visitedAddresses.Add(startAddress);
-           foundTiles.Add(startingTileEntity);
-
-           while (addressQueue.Count > 0)
-           {
-               int2 currentAddress = addressQueue.Dequeue();
-
-               int2[] neighborOffsets = { new int2(1, 0), new int2(-1, 0), new int2(0, 1), new int2(0, -1) };
-
-               foreach (int2 offset in neighborOffsets)
-               {
-                   int2 neighborAddress = currentAddress + offset;
-
-                   if (!visitedAddresses.Contains(neighborAddress))
-                   {
-
-                       Entity neighborEntity = -1;
-                       var neighborTiles = tileQuery.ToComponentDataArray<TileItemComponent>(Allocator.Temp);
-
-                        for (int i = 0; i < neighborTiles.Length; i++)
-                        {
-                          if (neighborTiles[i].Address.Equals(neighborAddress))
-                          {
-                              neighborEntity = tileQuery.ToEntityArray(Allocator.Temp)[i];
-                              break;
-                          }
-                        }
-
-                       neighborTiles.Dispose();
-
-
-                       if (neighborEntity != -1 && entityManager.GetComponentData<TileItemComponent>(neighborEntity).TileType == targetTileType)
-                       {
-                           foundTiles.Add(neighborEntity);
-                           addressQueue.Enqueue(neighborAddress);
-                           visitedAddresses.Add(neighborAddress);
-                       }
-                   }
-               }
-           }
-
-           addressQueue.Dispose();
-           visitedAddresses.Dispose();
-           return foundTiles;
-       }
-   }
-    */

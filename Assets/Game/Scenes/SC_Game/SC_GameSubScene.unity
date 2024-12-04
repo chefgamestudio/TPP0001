@@ -158,6 +158,7 @@ MonoBehaviour:
   _tile4Prefab: {fileID: 3910760454984577157, guid: d4fca298cac9e4fc8bf749d194f2d6a2, type: 3}
   _scale: 1
   _movingSpeed: 15
+  _gridCellPrefab: {fileID: 7027442908079627926, guid: 907c8d437867c48069385b9852f9c93a, type: 3}
 --- !u!4 &862910764
 Transform:
   m_ObjectHideFlags: 0

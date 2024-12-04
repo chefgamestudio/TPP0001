@@ -2,6 +2,7 @@ using gs.chef.game.app;
 using gs.chef.game.input;
 using gs.chef.game.level;
 using gs.chef.game.level.events;
+using gs.chef.game.tile.events;
 using gs.ChefDI;
 using gs.ChefDI.Unity;
 using MessagePipe;
@@ -25,6 +26,7 @@ namespace gs.chef.game.core
 
             builder.RegisterMessageBroker<CurrentAppStateEvent>(messagePipeOptions);
             builder.RegisterMessageBroker<LoadLevelEvent>(messagePipeOptions);
+            builder.RegisterMessageBroker<AddMatchedTilesEvent>(messagePipeOptions);
 
             #endregion
 
@@ -55,6 +57,7 @@ namespace gs.chef.game.core
                 system.Add<AppStateSystem>();
                 system.Add<LevelManageSystem>();
                 system.Add<GameInputSystem>();
+                //system.AddUnmanaged<TileMatchingAnimationSystem>();
             });
 
             #endregion

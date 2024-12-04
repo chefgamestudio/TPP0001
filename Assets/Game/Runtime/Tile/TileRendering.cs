@@ -29,6 +29,7 @@ namespace gs.chef.game.tile
         }
     }
     
+    [BurstCompile]
     
     public partial struct TileRenderingJob : IJobEntity
     {
@@ -38,6 +39,7 @@ namespace gs.chef.game.tile
         [BurstCompile]
         private void Execute(Entity entity, in TileItemComponent addressComponent, [ChunkIndexInQuery] int sortKey)
         {
+            
         }
 
     }

@@ -100,15 +100,21 @@ namespace gs.chef.game.level
             var move = direction * speed * DeltaTime;
 
             var newPos = position + move;
+            
+            if(movingComponent.IsMoving == false)
+            {
+                return;
+            } 
 
             position = newPos;
             itemComponent.Position = position;
 
-            if (distance < speed * DeltaTime)
+            if (distance < 0.2f)
             {
                 localTransform.Position = targetPosition;
                 itemComponent.Position = targetPosition;
-                CommandBuffer.SetComponentEnabled<TileMovingComponent>(sortKey, entity, false);
+                movingComponent.IsMoving = false;
+                //CommandBuffer.SetComponentEnabled<TileMovingComponent>(sortKey, entity, false);
                 if (itemComponent.Address.y <= 10)
                     CommandBuffer.SetComponentEnabled<ClickableComponent>(sortKey, entity, true);
                 else

@@ -6,6 +6,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Logging;
+using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Authoring;
 using UnityEngine;
@@ -124,10 +125,13 @@ namespace gs.chef.game.input
                 }
 
                 hitReference.Dispose();
+                
+                
             }
         }
     }
 
+    [BurstCompile]
     public struct RaycastJob : IJob
     {
         public RaycastInput RayInput;
